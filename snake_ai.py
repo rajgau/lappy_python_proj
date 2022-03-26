@@ -1,32 +1,40 @@
+from platform import machine
 import random
 from time import time
 import pygame as pg
 frac_x,frac_y=600,600
-width,height=(15,15)
+width,height=(20,20)
 window=pg.display.set_mode((frac_x,frac_y))
 pg.display.set_caption(__file__.split("/")[-1])
 def update():
     pg.display.update()
+    Env.clock.tick(20)
     window.fill((0,0,0))
     x=y=0
     for event in pg.event.get():
         if event.type==pg.QUIT:quit()
         if event.type==pg.KEYDOWN:
-            if event.key==pg.K_UP:x=1
-            elif event.key==pg.K_DOWN:x=-1
-            if event.key==pg.K_RIGHT:y=1
-            elif event.key==pg.K_LEFT:y=-1
+            if event.key==pg.K_UP:y=-1
+            elif event.key==pg.K_DOWN:y=1
+            if event.key==pg.K_RIGHT:x=1
+            elif event.key==pg.K_LEFT:x=-1
+            if event.key==pg.K_ESCAPE:quit()
     return (x,y)
 class Env:
+    clock=pg.time.Clock()
     def __init__(self,width,height):
         self.size_x=frac_x/width
         self.size_y=frac_y/height
+        self.body=[[width//2,height//2]]
         self.food=self.create_food()
         self.vel_x=0
-        self.vel_y=1
-        self.body=[(width//2,height//2)]
-        self.frame_time=0
-    def create_food(self):return (random.randint(0,width-1),random.randint(0,height-1))
+        self.vel_y=-1
+        self.colide=False
+    def create_food(self):
+        seq=[[i,j] for i in range(width) for j in range(height)]
+        for i in self.body:
+            seq.remove(i)
+        return tuple(random.choice(seq))
     def show_env(self):
         for i in range(width):
             for j in range(height):
@@ -36,21 +44,58 @@ class Env:
         pg.draw.rect(window,(70,70,70),(self.food[0]*self.size_x+3,self.food[1]*self.size_y+3,self.size_x-6,self.size_y-6))
         for part in self.body:
             pg.draw.rect(window,(255,105,180),(self.size_x*part[0],self.size_y*part[1],self.size_x,self.size_y))
-    def move_snake(self,x,y):
+            pg.draw.rect(window,(70,70,70),(self.size_x*part[0]+3,self.size_y*part[1]+3,self.size_x-6,self.size_y-6))
+    def step(self,move=None):
+        if move==None:
+            movement=update()
+            move=human_to_machine(movement)
+        """takes number from 0 to 4 to move the snake"""
+        x,y=0,0
+        if move==0:x,y=0,0 # no input
+        if move==1:x,y=0,-1 # up
+        if move==2:x,y=1,0 # left
+        if move==3:x,y=0,1 # down
+        if move==4:x,y=-1,0 # right
         if self.vel_y!=0:
-            if x!=0:self.vel_x=x
+            if x!=0:
+                self.vel_x=x
+                self.vel_y=0
         elif self.vel_x!=0:
-            if y!=0:self.vel_y=y
-        
-    
+            if y!=0:
+                self.vel_y=y
+                self.vel_x=0
+        if len(self.body)==1:
+            self.body[-1][0]+=self.vel_x
+            self.body[-1][1]+=self.vel_y
+            if self.body[-1][0]+self.vel_x<-1:self.body[-1][0]=width-1
+            elif self.body[-1][0]+self.vel_x>width:self.body[-1][0]=0
+            elif self.body[-1][1]+self.vel_y<-1:self.body[-1][1]=height-1
+            elif self.body[-1][1]+self.vel_y>height:self.body[-1][1]=0
+        else:
+            self.body.pop()
+            if self.body[0][0]+self.vel_x<0:self.body.insert(0,[width+self.vel_x,self.body[0][1]+self.vel_y])
+            elif self.body[0][0]+self.vel_x>=width:self.body.insert(0,[0,self.body[0][1]+self.vel_y])
+            elif self.body[0][1]+self.vel_y<0:self.body.insert(0,[self.body[0][0]+self.vel_x,height+self.vel_y])
+            elif self.body[0][1]+self.vel_y>=height:self.body.insert(0,[self.body[0][0]+self.vel_x,0])
+            else:self.body.insert(0,[self.body[0][0]+self.vel_x,self.body[0][1]+self.vel_y])
+        food_rew=self.eat_food()
+        return (0,food_rew,self.colide,{})
+    def eat_food(self):
+        if tuple(self.body[0])==self.food:
+            self.food=self.create_food()
+            self.body.append([self.body[0][0]-self.vel_x,self.body[0][1]-self.vel_y])
+            return 10
+        return 0
+def human_to_machine(*move):
+    x,y=move[0]
+    if x==0 and y==0:return 0 #none
+    elif x==0 and y==-1:return 1 #up
+    elif x==1 and y==0:return 2 #left
+    elif x==0 and y==1:return 3 #down
+    elif x==-1 and y==0:return 4 #right
 env=Env(width,height)
-env.create_food()
 while 1:
-    t1=time()
-    movement=update()
+    n_state,reward,done,info=env.step()
+    # print(env.step()
     env.show_env()
-    t2=time()
-    dt=1//(t2-t1)
-    print(dt)
-    env.move_snake(movement,dt)
 
