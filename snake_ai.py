@@ -1,28 +1,30 @@
-from platform import machine
 import random
-from time import time
 import pygame as pg
 frac_x,frac_y=600,600
-width,height=(20,20)
 window=pg.display.set_mode((frac_x,frac_y))
 pg.display.set_caption(__file__.split("/")[-1])
-def update():
-    pg.display.update()
-    Env.clock.tick(20)
-    window.fill((0,0,0))
-    x=y=0
-    for event in pg.event.get():
-        if event.type==pg.QUIT:quit()
-        if event.type==pg.KEYDOWN:
-            if event.key==pg.K_UP:y=-1
-            elif event.key==pg.K_DOWN:y=1
-            if event.key==pg.K_RIGHT:x=1
-            elif event.key==pg.K_LEFT:x=-1
-            if event.key==pg.K_ESCAPE:quit()
-    return (x,y)
+def update(show_env=True):
+    if show_env:
+        pg.display.update()
+        window.fill((0,0,0))
+        Env.clock.tick(20)
+        x=y=0
+        for event in pg.event.get():
+            if event.type==pg.QUIT:quit()
+            if event.type==pg.KEYDOWN:
+                if event.key==pg.K_UP:y=-1
+                elif event.key==pg.K_DOWN:y=1
+                if event.key==pg.K_RIGHT:x=1
+                elif event.key==pg.K_LEFT:x=-1
+                if event.key==pg.K_ESCAPE:quit()
+        return (x,y)
+    else:return random.choice([-1,0,1]),random.choice([-1,0,1])
 class Env:
     clock=pg.time.Clock()
-    def __init__(self,width,height):
+    def __init__(self,width,height,show_env=False):
+        self.show_env=show_env
+        if not show_env:pg.quit()
+        self.width,self.height=width,height
         self.size_x=frac_x/width
         self.size_y=frac_y/height
         self.body=[[width//2,height//2]]
@@ -31,15 +33,17 @@ class Env:
         self.vel_y=-1
         self.colide=False
     def create_food(self):
-        seq=[[i,j] for i in range(width) for j in range(height)]
+        seq=[[i,j] for i in range(self.width) for j in range(self.height)]
         for i in self.body:
             seq.remove(i)
         return tuple(random.choice(seq))
-    def show_env(self):
-        for i in range(width):
-            for j in range(height):
-                pg.draw.rect(window,(100,100,100),(self.size_x*i,self.size_y*j,self.size_x,self.size_y))
-                pg.draw.rect(window,(40,40,40),(self.size_x*i,self.size_y*j,self.size_x-1,self.size_y-1))
+    def show_envm(self):
+        for i in range(self.width):
+            for j in range(self.height):
+                try:
+                    pg.draw.rect(window,(100,100,100),(self.size_x*i,self.size_y*j,self.size_x,self.size_y))
+                    pg.draw.rect(window,(40,40,40),(self.size_x*i,self.size_y*j,self.size_x-1,self.size_y-1))
+                except:print("~\_(-_-)_/~")
         pg.draw.rect(window,(255,0,0),(self.food[0]*self.size_x,self.food[1]*self.size_y,self.size_x,self.size_y))
         pg.draw.rect(window,(70,70,70),(self.food[0]*self.size_x+3,self.food[1]*self.size_y+3,self.size_x-6,self.size_y-6))
         for part in self.body:
@@ -47,7 +51,7 @@ class Env:
             pg.draw.rect(window,(70,70,70),(self.size_x*part[0]+3,self.size_y*part[1]+3,self.size_x-6,self.size_y-6))
     def step(self,move=None):
         if move==None:
-            movement=update()
+            movement=update(self.show_env)
             move=human_to_machine(movement)
         """takes number from 0 to 4 to move the snake"""
         x,y=0,0
@@ -67,16 +71,16 @@ class Env:
         if len(self.body)==1:
             self.body[-1][0]+=self.vel_x
             self.body[-1][1]+=self.vel_y
-            if self.body[-1][0]+self.vel_x<-1:self.body[-1][0]=width-1
-            elif self.body[-1][0]+self.vel_x>width:self.body[-1][0]=0
-            elif self.body[-1][1]+self.vel_y<-1:self.body[-1][1]=height-1
-            elif self.body[-1][1]+self.vel_y>height:self.body[-1][1]=0
+            if self.body[-1][0]+self.vel_x<-1:self.body[-1][0]=self.width-1
+            elif self.body[-1][0]+self.vel_x>self.width:self.body[-1][0]=0
+            elif self.body[-1][1]+self.vel_y<-1:self.body[-1][1]=self.height-1
+            elif self.body[-1][1]+self.vel_y>self.height:self.body[-1][1]=0
         else:
             self.body.pop()
-            if self.body[0][0]+self.vel_x<0:self.body.insert(0,[width+self.vel_x,self.body[0][1]+self.vel_y])
-            elif self.body[0][0]+self.vel_x>=width:self.body.insert(0,[0,self.body[0][1]+self.vel_y])
-            elif self.body[0][1]+self.vel_y<0:self.body.insert(0,[self.body[0][0]+self.vel_x,height+self.vel_y])
-            elif self.body[0][1]+self.vel_y>=height:self.body.insert(0,[self.body[0][0]+self.vel_x,0])
+            if self.body[0][0]+self.vel_x<0:self.body.insert(0,[self.width+self.vel_x,self.body[0][1]+self.vel_y])
+            elif self.body[0][0]+self.vel_x>=self.width:self.body.insert(0,[0,self.body[0][1]+self.vel_y])
+            elif self.body[0][1]+self.vel_y<0:self.body.insert(0,[self.body[0][0]+self.vel_x,self.height+self.vel_y])
+            elif self.body[0][1]+self.vel_y>=self.height:self.body.insert(0,[self.body[0][0]+self.vel_x,0])
             else:self.body.insert(0,[self.body[0][0]+self.vel_x,self.body[0][1]+self.vel_y])
         food_rew=self.eat_food()
         return (0,food_rew,self.colide,{})
@@ -86,6 +90,8 @@ class Env:
             self.body.append([self.body[0][0]-self.vel_x,self.body[0][1]-self.vel_y])
             return 10
         return 0
+    def close(self):
+        pg.quit()
 def human_to_machine(*move):
     x,y=move[0]
     if x==0 and y==0:return 0 #none
@@ -93,9 +99,9 @@ def human_to_machine(*move):
     elif x==1 and y==0:return 2 #left
     elif x==0 and y==1:return 3 #down
     elif x==-1 and y==0:return 4 #right
-env=Env(width,height)
+env=Env(10,10)
 while 1:
     n_state,reward,done,info=env.step()
     # print(env.step()
-    env.show_env()
+    env.show_envm()
 
