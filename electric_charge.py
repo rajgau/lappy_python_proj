@@ -41,4 +41,4 @@ while 1:
     update()
     for particle in particles:
         particle.show()
-        # particle.force_move(particles)
+        particle.force_move(particles)

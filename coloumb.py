@@ -1,4 +1,3 @@
-from curses import window
 import pygame as pg
 from math import dist
 width,height=600,600
@@ -22,7 +21,7 @@ P.show()
 def Vector_feld(P):
     for i in range(0,width,6):
         for j in range(0,height,6):
-            intencity = (0.1*P.charge)/(dist((i,j),(P.x,P.y))**2)
+            intencity = (0.1*P.charge)/((dist((i,j),(P.x,P.y))**2)+0.001)
             
 while 1:
     update()
